@@ -1,4 +1,4 @@
-package main
+/*package main
 
 import (
     "fmt"
@@ -83,4 +83,4 @@ func main() {
 
     maze := generateMaze(width, height)
     printMaze(maze)
-}
+}*/
