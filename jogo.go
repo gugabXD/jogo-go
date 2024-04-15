@@ -343,7 +343,7 @@ func moveMontado(comando rune) {
 		dx = 1
 	}
 	novaPosX, novaPosY := posX+dx, posY+dy
-	if novaPosY >= 0 && novaPosY < len(mapa) && novaPosX >= 0 && novaPosX < len(mapa[novaPosY]) {
+	if novaPosY >= 0 && novaPosY+1 < len(mapa) && novaPosX >= 0 && novaPosX < len(mapa[novaPosY]) {
 		mapa[posY][posX] = ultimoElementoSobPersonagem         // Restaura o elemento anterior
 		ultimoElementoSobPersonagem = mapa[novaPosY][novaPosX] // Atualiza o elemento sob o personagem
 		if ultimoElementoSobPersonagem == cavalo {
