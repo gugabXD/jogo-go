@@ -37,6 +37,14 @@ var inimigo = Elemento{
 	interagivel: true,
 }
 
+var portal = Elemento{
+	simbolo:     '⛩',
+	cor:         termbox.ColorRed,
+	corFundo:    termbox.ColorDefault,
+	tangivel:    true,
+	interagivel: true,
+}
+
 var cavalo = Elemento{
 	simbolo:     '♞',
 	cor:         termbox.ColorRed,
@@ -52,6 +60,14 @@ var parede = Elemento{
 	corFundo:    termbox.ColorDarkGray,
 	tangivel:    true,
 	interagivel: false,
+}
+
+var objetivo = Elemento{
+	simbolo:     '⛝',
+	cor:         termbox.ColorDefault,
+	corFundo:    termbox.ColorDefault,
+	tangivel:    true,
+	interagivel: true,
 }
 
 // Barrreira
@@ -70,6 +86,14 @@ var vegetacao = Elemento{
 	corFundo:    termbox.ColorDefault,
 	tangivel:    false,
 	interagivel: false,
+}
+
+var chave = Elemento{
+	simbolo:     '⚿',
+	cor:         termbox.ColorYellow,
+	corFundo:    termbox.ColorDefault,
+	tangivel:    true,
+	interagivel: true,
 }
 
 // Elemento vazio
@@ -91,7 +115,7 @@ var neblina = Elemento{
 }
 
 var mapa [][]Elemento
-var posX, posY, posIX, posIY, posCX, posCY int
+var posX, posY, posIX, posIY, posCX, posCY, p1X, p1Y, p2X, p2Y int
 var ultimoElementoSobPersonagem = vazio
 var ultimoElementoSobInimigo = vazio
 var ultimoElementoSobCavalo = vazio
@@ -99,8 +123,11 @@ var statusMsg string
 var fim = false
 var montando = false
 var derrotado = false
+var key = false
+var portalAberto = false
+var win = false
 
-var efeitoNeblina = false
+var efeitoNeblina = true
 var revelado [][]bool
 var raioVisao int = 3
 
@@ -118,6 +145,7 @@ func main() {
 	desenhaTudo()
 	go moveInimigo()
 	go moveCavalo()
+	go ativaPortal()
 	for {
 
 		switch ev := termbox.PollEvent(); ev.Type {
@@ -150,6 +178,7 @@ func carregarMapa(nomeArquivo string) {
 
 	scanner := bufio.NewScanner(arquivo)
 	y := 0
+	portais := 0
 	for scanner.Scan() {
 		linhaTexto := scanner.Text()
 		var linhaElementos []Elemento
@@ -163,6 +192,20 @@ func carregarMapa(nomeArquivo string) {
 				elementoAtual = barreira
 			case vegetacao.simbolo:
 				elementoAtual = vegetacao
+			case chave.simbolo:
+				elementoAtual = chave
+			case objetivo.simbolo:
+				elementoAtual = objetivo
+			case portal.simbolo:
+				elementoAtual = portal
+				if portais == 1 {
+					p2X, p2Y = x, y
+					portais++
+				}
+				if portais == 0 {
+					p1X, p1Y = x, y
+					portais++
+				}
 			case personagem.simbolo:
 				// Atualiza a posição inicial do personagem
 				posX, posY = x, y
@@ -207,6 +250,9 @@ func gameOver() {
 	fim = true
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	gameOverMsg := "GAME OVER, você foi morto pelo inimigo."
+	if win {
+		gameOverMsg = "Parabéns, você venceu!!! ☺☺☺"
+	}
 	for i, c := range gameOverMsg {
 		width, height := termbox.Size()
 		x := width * 0
@@ -324,25 +370,28 @@ func interagir() {
 		statusMsg = fmt.Sprintf("Você parou de montar o cavalo")
 		montando = false
 		go moveCavalo()
+		return
 	}
-	menorDistancia := 20.0
+	menorDistancia := 100.0
 	x := 0
 	y := 0
-	for dx := -3; dx < 4; dx++ {
-		for dy := -3; dy < 4; dy++ {
+	for dx := -4; dx < 5; dx++ {
+		for dy := -4; dy < 5; dy++ {
 			distancia := math.Sqrt(float64(dx*dx + dy*dy))
-			aux := mapa[posY+dy][posX+dx]
-			if aux.interagivel {
-				if distancia < menorDistancia {
-					menorDistancia = distancia
-					x = posX + dx
-					y = posY + dy
+			novaPosX, novaPosY := posX+dx, posY+dy
+			if novaPosY >= 0 && novaPosY < len(mapa) && novaPosX >= 0 && novaPosX < len(mapa[novaPosY]) {
+				aux := mapa[novaPosY][novaPosX]
+				if aux.interagivel {
+					if distancia < menorDistancia {
+						menorDistancia = distancia
+						x = posX + dx
+						y = posY + dy
+					}
 				}
 			}
 		}
 	}
-	if menorDistancia < 20 {
-		statusMsg = fmt.Sprintf("teste")
+	if menorDistancia < 100 {
 		aux := mapa[y][x]
 		char := aux.simbolo
 		switch char {
@@ -362,9 +411,40 @@ func interagir() {
 		case inimigo.simbolo:
 			statusMsg = fmt.Sprintf("Você matou o inimigo em %d, %d", x, y)
 			derrotado = true
+		case chave.simbolo:
+			statusMsg = fmt.Sprintf("Você achou uma chave escondida! Para que será que serve?")
+			key = true
+			mapa[y][x] = vazio
+		case objetivo.simbolo:
+			if !key {
+				statusMsg = fmt.Sprintf("A parede parece diferente...")
+			}
+			if key {
+				win = true
+				gameOver()
+			}
+		case portal.simbolo:
+			if !portalAberto {
+				statusMsg = fmt.Sprintf("O que é isso, um templo chinês? um portal?")
+			}
+			if portalAberto {
+				if int(y) == int(p1Y) {
+					mapa[posY][posX] = ultimoElementoSobPersonagem
+					ultimoElementoSobPersonagem = mapa[p2Y][p2X-2]
+					posX, posY = p2X-3, p2Y
+					mapa[posY][posX] = personagem
+				}
+				if int(y) == int(p2Y) {
+					statusMsg = fmt.Sprintf("O portal te levou a um cômodo secreto...?")
+					mapa[posY][posX] = ultimoElementoSobPersonagem
+					ultimoElementoSobPersonagem = mapa[p1Y][p1X-2]
+					posX, posY = p1X-3, p1Y
+					mapa[posY][posX] = personagem
+				}
+			}
 		}
 	}
-	if menorDistancia == 20 {
+	if menorDistancia == 100 {
 		statusMsg = fmt.Sprintf("não há ninguém para interagir")
 	}
 }
@@ -401,6 +481,7 @@ func moveInimigo() {
 			}
 		}
 		if fim {
+			gameOver()
 			return
 		}
 		if derrotado {
@@ -442,10 +523,6 @@ func moveCavalo() {
 			dy = -2
 		}
 		novaPosX, novaPosY := posCX+dx, posCY+dy
-		if mapa[novaPosY][novaPosX] == personagem {
-			statusMsg = fmt.Sprintf("O inimigo te atacou em (%d, %d)", posX, posY)
-			gameOver()
-		}
 		if novaPosY >= 0 && novaPosY < len(mapa) && novaPosX >= 0 && novaPosX < len(mapa[novaPosY]) &&
 			mapa[novaPosY][novaPosX].tangivel == false {
 			mapa[posCY][posCX] = ultimoElementoSobCavalo
@@ -455,11 +532,26 @@ func moveCavalo() {
 		}
 		time.Sleep(1 * time.Second)
 		if fim {
+			gameOver()
 			return
 		}
 		if montando {
 			return
 		}
 		desenhaTudo()
+	}
+}
+
+func ativaPortal() {
+	for {
+		if fim {
+			gameOver()
+			return
+		}
+		n := rand.Intn(10)
+		portalAberto = true
+		time.Sleep(time.Duration(n) * time.Second)
+		portalAberto = false
+		time.Sleep(4 * time.Second)
 	}
 }
