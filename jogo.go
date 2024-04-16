@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"time"
-
+	"sync"
 	"github.com/nsf/termbox-go"
 )
 
@@ -113,6 +113,8 @@ var neblina = Elemento{
 	tangivel:    false,
 	interagivel: false,
 }
+
+var mutex sync.Mutex
 
 var mapa [][]Elemento
 var posX, posY, posIX, posIY, posCX, posCY, p1X, p1Y, p2X, p2Y int
@@ -302,6 +304,7 @@ func min(a, b int) int {
 }
 
 func mover(comando rune) {
+	
 	if fim {
 		return
 	}
@@ -451,6 +454,7 @@ func interagir() {
 
 func moveInimigo() {
 	for {
+		mutex.Lock()
 		n := rand.Intn(4)
 		dx, dy := 0, 0
 		switch n {
@@ -486,14 +490,17 @@ func moveInimigo() {
 		}
 		if derrotado {
 			mapa[posIY][posIX] = vazio
+			mutex.Unlock()
 			return
 		}
 		desenhaTudo()
+		mutex.Unlock()
 	}
 }
 
 func moveCavalo() {
 	for {
+		mutex.Lock()
 		n := rand.Intn(8)
 		dx, dy := 0, 0
 		switch n {
@@ -536,16 +543,17 @@ func moveCavalo() {
 			return
 		}
 		if montando {
+			mutex.Unlock()
 			return
 		}
 		desenhaTudo()
+		mutex.Unlock()
 	}
 }
 
 func ativaPortal() {
 	for {
 		if fim {
-			gameOver()
 			return
 		}
 		n := rand.Intn(10)
