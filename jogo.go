@@ -372,10 +372,12 @@ func moveMontado(comando rune) {
 }
 
 func interagir() {
+	mutex.Lock()
 	if montando {
 		statusMsg = fmt.Sprintf("Você parou de montar o cavalo")
 		montando = false
 		go moveCavalo()
+		mutex.Unlock()
 		return
 	}
 	menorDistancia := 100.0
@@ -404,6 +406,7 @@ func interagir() {
 		case cavalo.simbolo:
 			if mapa[posCY+1][posCX].tangivel {
 				statusMsg = fmt.Sprintf("Não é possível montar o cavalo aqui")
+				mutex.Unlock()
 				return
 			}
 			novaPosX := posCX
@@ -453,6 +456,7 @@ func interagir() {
 	if menorDistancia == 100 {
 		statusMsg = fmt.Sprintf("não há ninguém para interagir")
 	}
+	mutex.Unlock()
 }
 
 func moveInimigo() {
