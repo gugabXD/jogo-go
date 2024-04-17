@@ -6,8 +6,9 @@ import (
 	"math"
 	"math/rand"
 	"os"
-	"time"
 	"sync"
+	"time"
+
 	"github.com/nsf/termbox-go"
 )
 
@@ -304,7 +305,7 @@ func min(a, b int) int {
 }
 
 func mover(comando rune) {
-	
+	mutex.Lock()
 	if fim {
 		return
 	}
@@ -331,6 +332,7 @@ func mover(comando rune) {
 		posX, posY = novaPosX, novaPosY                        // Move o personagem
 		mapa[posY][posX] = personagem
 	}
+	mutex.Unlock()
 }
 
 func moveMontado(comando rune) {
@@ -366,6 +368,7 @@ func moveMontado(comando rune) {
 		mapa[posCY][posCX] = cavalo
 
 	}
+	mutex.Unlock()
 }
 
 func interagir() {
@@ -475,7 +478,7 @@ func moveInimigo() {
 			posIX, posIY = novaPosX, novaPosY
 			mapa[posIY][posIX] = inimigo
 		}
-		time.Sleep(1 * time.Second)
+
 		for dx := -1; dx < 2; dx++ {
 			for dy := -1; dy < 2; dy++ {
 				if mapa[posIY+dy][posIX+dx] == personagem {
@@ -495,6 +498,7 @@ func moveInimigo() {
 		}
 		desenhaTudo()
 		mutex.Unlock()
+		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -537,7 +541,7 @@ func moveCavalo() {
 			posCX, posCY = novaPosX, novaPosY
 			mapa[posCY][posCX] = cavalo
 		}
-		time.Sleep(1 * time.Second)
+
 		if fim {
 			gameOver()
 			return
@@ -548,6 +552,7 @@ func moveCavalo() {
 		}
 		desenhaTudo()
 		mutex.Unlock()
+		time.Sleep(1 * time.Second)
 	}
 }
 
